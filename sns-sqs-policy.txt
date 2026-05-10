@@ -1,0 +1,100 @@
+Open MyS3Queue → Access Policy → Edit
+Replace:
+• SQS ARN 
+
+{
+ "Version": "2012-10-17",
+ "Id": "__default_policy_ID",
+ "Statement": [
+ {
+ "Sid": "__owner_statement",
+ "Effect": "Allow", 
+"Principal": {
+ "AWS": "arn:aws:iam::352917280532:root"
+ },
+ "Action": "SQS:*",
+ "Resource": "arn:aws:sqs:us-east-1:352917280532:MyS3Queue"
+ },
+ {
+ "Sid": "Allow-SNS-SendMessage",
+ "Effect": "Allow",
+ "Principal": {
+ "Service": "sns.amazonaws.com"
+ },
+ "Action": "SQS:SendMessage",
+ "Resource": "arn:aws:sqs:us-east-1:352917280532:MyS3Queue",
+ "Condition": {
+ "ArnEquals": {
+ "aws:SourceArn": "arn:aws:sns:us-east-1:352917280532:MyS3SNSTopic"
+ }
+ }
+ }
+ ]
+}
+
+______________________________________
+Open SNS Topic → Edit access policy
+Replace: 
+
+{
+ "Version": "2012-10-17",
+ "Id": "__default_policy_ID",
+ "Statement": [
+ {
+ "Sid": "__default_statement_ID",
+ "Effect": "Allow",
+ "Principal": {
+ "AWS": "*"
+ },
+ "Action": [
+ "SNS:Publish",
+ "SNS:RemovePermission",
+ "SNS:SetTopicAttributes",
+ "SNS:DeleteTopic",
+ "SNS:ListSubscriptionsByTopic",
+ "SNS:GetTopicAttributes",
+ "SNS:AddPermission",
+ "SNS:Subscribe"
+ ],
+ "Resource": "arn:aws:sns:us-east-1:352917280532:MyS3SNSTopic",
+"Condition": {
+ "StringEquals": {
+ "AWS:SourceAccount": "352917280532"
+ }
+ }
+ },
+ {
+ "Sid": "AllowS3Publish",
+ "Effect": "Allow",
+ "Principal": {
+ "Service": "s3.amazonaws.com"
+ },
+ "Action": "SNS:Publish",
+ "Resource": "arn:aws:sns:us-east-1:352917280532:MyS3SNSTopic",
+ "Condition": {
+ "ArnLike": {
+ "aws:SourceArn": "arn:aws:s3:::mys3eventbucket1234salaar"
+ },
+ "StringEquals": {
+ "aws:SourceAccount": "352917280532"
+ }
+ }
+ }
+ ]
+}
+
+
+----------------------------------
+lambda code=>
+
+import json
+
+def lambda_handler(event, context):
+    for record in event['Records']:
+        print("Message received from SQS:")
+        print(record['body'])
+
+    return {
+        'statusCode': 200,
+        'body': 'Message processed successfully'
+    }
